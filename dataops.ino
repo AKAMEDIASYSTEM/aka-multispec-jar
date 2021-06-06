@@ -3,6 +3,43 @@ float summarize(int farback) {
   return slope;
 }
 
+void initSensors() {
+  if (! vl.begin()) {
+    Serial.println("Sensor VL6180 not found :(");
+    delay(1000);
+  } else {
+    Serial.println("Sensor VL6180 online");
+  }
+
+  if (!scd.begin()) {
+    Serial.println("Sensor SCD30 not found :(");
+    delay(1000);
+  } else {
+    Serial.println("Sensor SCD30 online");
+  }
+
+}
+
+int maxOf(int series[], int seriesDepth) {
+  int theMax = -200000;
+  for (int i = 0; i < seriesDepth; i++) {
+    if (series[i] > theMax) {
+      theMax = series[i];
+    }
+  }
+  return theMax;
+}
+
+int minOf(int series[], int seriesDepth) {
+  int theMin = 200000;
+  for (int i = 0; i < seriesDepth; i++) {
+    if (series[i] < theMin) {
+      theMin = series[i];
+    }
+  }
+  return theMin;
+}
+
 void clobber() {
   // fill timeseries with dummy init data for debugging purposes
   for (int i = 0; i < SAMPLE_DEPTH; i++) {
@@ -45,71 +82,54 @@ void stopFan() {
 }
 
 void sampler() {
+  int distance = 0;
+  int gas = 0;
+  int rh = 0;
+  int tmp = 0;
+
   startFan();
   delay(FAN_DURATION_MS);
-  // all sensor-sampling happens here
+
   if (VERBOSE) {
     Serial.print("inside sampler, series1[0] is ");
     Serial.println(series1[0]);
   }
-  if (VC) {
-    distance = vc.readProximity();
-    if (VERBOSE) {
-      Serial.print("VCNL distance is: ");
-      Serial.println(distance);
-    }
-  } else if (RFD) {
-    rfd.takeMeasurement(); //Tell sensor to take measurement
-    delay(5);
-    distance = rfd.getDistance(); //Retrieve the distance value
-    if (VERBOSE) {
-      Serial.print("RFD distance is: ");
-      Serial.println(distance);
-    }
-  } else if (VCNL) {
-    distance = vcnl.getProximity();
-    if (VERBOSE) {
-      Serial.print("VCNL distance is: ");
-      Serial.println(distance);
-    }
-  } else if (VL) {
-    uint8_t range = vl.readRange();
-    uint8_t status = vl.readRangeStatus();
+  uint8_t range = vl.readRange();
+  uint8_t status = vl.readRangeStatus();
 
-    if (status == VL6180X_ERROR_NONE) {
-      distance = range;
-    }
-    if (VERBOSE) {
-      Serial.print("VL6180 distance is: ");
-      Serial.println(distance);
-    }
-    if ((status >= VL6180X_ERROR_SYSERR_1) && (status <= VL6180X_ERROR_SYSERR_5)) {
-      Serial.println("VL6180X_ERROR error");
-    }
-    else if (status == VL6180X_ERROR_ECEFAIL) {
-      Serial.println("VL6180X_ERROR ECE failure");
-    }
-    else if (status == VL6180X_ERROR_NOCONVERGE) {
-      Serial.println("VL6180X_ERROR No convergence");
-    }
-    else if (status == VL6180X_ERROR_RANGEIGNORE) {
-      Serial.println("VL6180X_ERROR Ignoring range");
-    }
-    else if (status == VL6180X_ERROR_SNR) {
-      Serial.println("VL6180X_ERROR Signal/Noise error");
-    }
-    else if (status == VL6180X_ERROR_RAWUFLOW) {
-      Serial.println("Raw reading underflow");
-    }
-    else if (status == VL6180X_ERROR_RAWOFLOW) {
-      Serial.println("VL6180X_ERROR Raw reading overflow");
-    }
-    else if (status == VL6180X_ERROR_RANGEUFLOW) {
-      Serial.println("VL6180X_ERROR Range reading underflow");
-    }
-    else if (status == VL6180X_ERROR_RANGEOFLOW) {
-      Serial.println("VL6180X_ERROR Range reading overflow");
-    }
+  if (status == VL6180X_ERROR_NONE) {
+    distance = range;
+  }
+  if (VERBOSE) {
+    Serial.print("VL6180 distance is: ");
+    Serial.println(distance);
+  }
+  if ((status >= VL6180X_ERROR_SYSERR_1) && (status <= VL6180X_ERROR_SYSERR_5)) {
+    Serial.println("VL6180X_ERROR error");
+  }
+  else if (status == VL6180X_ERROR_ECEFAIL) {
+    Serial.println("VL6180X_ERROR ECE failure");
+  }
+  else if (status == VL6180X_ERROR_NOCONVERGE) {
+    Serial.println("VL6180X_ERROR No convergence");
+  }
+  else if (status == VL6180X_ERROR_RANGEIGNORE) {
+    Serial.println("VL6180X_ERROR Ignoring range");
+  }
+  else if (status == VL6180X_ERROR_SNR) {
+    Serial.println("VL6180X_ERROR Signal/Noise error");
+  }
+  else if (status == VL6180X_ERROR_RAWUFLOW) {
+    Serial.println("Raw reading underflow");
+  }
+  else if (status == VL6180X_ERROR_RAWOFLOW) {
+    Serial.println("VL6180X_ERROR Raw reading overflow");
+  }
+  else if (status == VL6180X_ERROR_RANGEUFLOW) {
+    Serial.println("VL6180X_ERROR Range reading underflow");
+  }
+  else if (status == VL6180X_ERROR_RANGEOFLOW) {
+    Serial.println("VL6180X_ERROR Range reading overflow");
   }
   if (distance > SENSOR_MAX) {
     distance = SENSOR_MAX;
@@ -137,19 +157,6 @@ void sampler() {
     series1min_h = distance;
   }
 
-  if (DEBUG) {
-    Serial.print("distance is ");
-    Serial.print(distance);
-    Serial.print(" local min: ");
-    Serial.print(series1min);
-    Serial.print(" local max: ");
-    Serial.print(series1max);
-    Serial.print(" historical min: ");
-    Serial.print(series1min_h);
-    Serial.print(" historical max: ");
-    Serial.println(series1max_h);
-  }
-
   //  if (VERBOSE) {
   //    for (int i = 0; i < SAMPLE_DEPTH; i++) {
   //      Serial.print(series1[i]);
@@ -169,31 +176,27 @@ void sampler() {
       Serial.println("Error reading sensor data");
       return;
     }
-
-    //    Serial.print("Temperature: ");
-    //    Serial.print(scd.temperature);
-    //    Serial.println(" degrees C");
-    //
-    //    Serial.print("Relative Humidity: ");
-    //    Serial.print(scd.relative_humidity);
-    //    Serial.println(" %");
-
-//    Serial.print("CO2: ");
-//    Serial.print(scd.CO2, 3);
-//    Serial.println(" ppm");
-
+    tmp = scd.temperature;
+    rh = scd.relative_humidity;
     gas = scd.CO2;
   } else {
     Serial.println("error with scd30, dataReady was false");
-    gas = 0;
   }
   for (int i = SAMPLE_DEPTH - 2; i >= 0; i--) {
     series2[i + 1] = series2[i];
+    series3[i + 1] = series3[i];
+    series4[i + 1] = series4[i];
   }
   series2[0] = gas;
+  series3[0] = tmp;
+  series4[0] = rh;
 
   series2max = maxOf(series2, SAMPLE_DEPTH);
   series2min = minOf(series2, SAMPLE_DEPTH);
+  series3max = maxOf(series3, SAMPLE_DEPTH);
+  series3min = minOf(series3, SAMPLE_DEPTH);
+  series4max = maxOf(series4, SAMPLE_DEPTH);
+  series4min = minOf(series4, SAMPLE_DEPTH);
 
   if (gas > series2max_h) {
     if (VERBOSE) {
@@ -211,9 +214,37 @@ void sampler() {
     series2min_h = gas;
   }
 
+  if (tmp > series3max_h) {
+    if (VERBOSE) {
+      Serial.print("new s3 historical maximum: ");
+      Serial.println(tmp);
+    }
+    series3max_h = tmp;
+  }
 
+  if (tmp < series3min_h) {
+    if (VERBOSE) {
+      Serial.print("new s3 historical minimum: ");
+      Serial.println(tmp);
+    }
+    series3min_h = tmp;
+  }
 
+  if (rh > series4max_h) {
+    if (VERBOSE) {
+      Serial.print("new s4 historical maximum: ");
+      Serial.println(rh);
+    }
+    series4max_h = rh;
+  }
 
+  if (rh < series4min_h) {
+    if (VERBOSE) {
+      Serial.print("new s4 historical minimum: ");
+      Serial.println(rh);
+    }
+    series4min_h = rh;
+  }
 
   //  if (VERBOSE) {
   //    for (int i = 0; i < SAMPLE_DEPTH; i++) {
@@ -224,6 +255,18 @@ void sampler() {
   //  }
 
   if (DEBUG) {
+
+    Serial.print("distance is ");
+    Serial.print(distance);
+    Serial.print(" local min: ");
+    Serial.print(series1min);
+    Serial.print(" local max: ");
+    Serial.print(series1max);
+    Serial.print(" historical min: ");
+    Serial.print(series1min_h);
+    Serial.print(" historical max: ");
+    Serial.println(series1max_h);
+    
     Serial.print("gas is ");
     Serial.print(gas);
     Serial.print(" local min: ");
@@ -234,78 +277,33 @@ void sampler() {
     Serial.print(series2min_h);
     Serial.print(" historical max: ");
     Serial.println(series2max_h);
+
+    Serial.print("tmp is ");
+    Serial.print(tmp);
+    Serial.print(" local min: ");
+    Serial.print(series3min);
+    Serial.print(" local max: ");
+    Serial.print(series3max);
+    Serial.print(" historical min: ");
+    Serial.print(series3min_h);
+    Serial.print(" historical max: ");
+    Serial.println(series3max_h);
+
+    Serial.print("rh is ");
+    Serial.print(rh);
+    Serial.print(" local min: ");
+    Serial.print(series4min);
+    Serial.print(" local max: ");
+    Serial.print(series4max);
+    Serial.print(" historical min: ");
+    Serial.print(series4min_h);
+    Serial.print(" historical max: ");
+    Serial.println(series4max_h);
     Serial.println();
   }
+
+
+
+
   stopFan();
-}
-
-void initSensors() {
-
-  // init whichever sensor we are testing with
-  if (RFD) {
-    if (rfd.begin() == false)
-    {
-      Serial.println("Sensor RFD77402 failed to initialize. Check wiring.");
-      //    while (1);
-    } else {
-      Serial.println("Sensor RFD77402 online");
-    }
-  } else if (VC) {
-    if (! vc.begin()) {
-      Serial.println("Sensor VCNL4010 not found :(");
-      //      while (1);
-    }
-    Serial.println("Sensor VCNL4010 online");
-  } else if (VCNL) {
-    if (!vcnl.begin()) {
-      Serial.println("Sensor VCNL4040 not found :(");
-      //      while (1);
-    }
-    Serial.println("Sensor VCNL4040 online");
-    vcnl.setProximityHighResolution(true);
-    vcnl.enableAmbientLight(false);
-    vcnl.enableWhiteLight(false);
-    // also consider vcnl.enableActiveForceMode which keeps sensor in ultra low power
-    // until polled https://cdn.sparkfun.com/assets/2/3/8/f/c/VCNL4040_Datasheet.pdf
-  } else if (VL) {
-    if (! vl.begin()) {
-      Serial.println("Sensor VL6180 not found :(");
-      //      while (1);
-    }
-    Serial.println("Sensor VL6180 online");
-  }
-
-  if (SGP) {
-    if (! sgp.begin()) {
-      Serial.println("Sensor SGP30 not found :(");
-      //    while (1);
-    }
-  }
-
-  if (!scd.begin()) {
-    Serial.println("Sensor SCD30 not found :(");
-    //    while (1);
-  }
-  Serial.println("Sensor SCD30 online");
-}
-
-int maxOf(int series[], int seriesDepth) {
-  int theMax = -200000;
-  for (int i = 0; i < seriesDepth; i++) {
-    if (series[i] > theMax) {
-      theMax = series[i];
-    }
-  }
-  return theMax;
-}
-
-int minOf(int series[], int seriesDepth) {
-  int theMin = 200000;
-  for (int i = 0; i < seriesDepth; i++) {
-    if (series[i] < theMin) {
-      theMin = series[i];
-    }
-  }
-  return theMin;
-
 }

@@ -1,5 +1,3 @@
-#include <SparkFun_Qwiic_Power_Switch_Arduino_Library.h>
-
 /*
    AKA E-Ink ESP32 Starter Jar
 
@@ -17,11 +15,6 @@
    contrivance to power a mini fan via a qwiic power switch that powers a qwiic boost module
 
 */
-
-
-
-
-
 /****************************************************************************************************************************
   Async_ConfigOnStartup.ino
   For ESP8266 / ESP32 boards
@@ -70,11 +63,6 @@
    the WiFi network credentials will be sent from the browser over an encrypted connection and
    can not be read by observers.
  *****************************************************************************************************************************/
-
-
-// AKA NOTE - THIS LASTS 6.5H ON A 450MAH LIPO AS OF APRIL 2 2021
-
-
 
 #if !( defined(ESP8266) ||  defined(ESP32) )
 #error This code is intended to run on the ESP8266 or ESP32 platform! Please check your Tools->Board setting.
@@ -164,24 +152,12 @@ FS* filesystem = &SPIFFS;
 #include <GxEPD.h>
 #include "SD.h"
 #include "SPI.h"
-#include <SparkFun_RFD77402_Arduino_Library.h>
-#include <Adafruit_VCNL4040.h>
-#include <Adafruit_VCNL4010.h>
 #include "Adafruit_VL6180X.h"
-#include "Adafruit_SGP30.h"
 #include <Adafruit_SCD30.h>
+#include <SparkFun_Qwiic_Power_Switch_Arduino_Library.h>
 Adafruit_SCD30 scd;
-Adafruit_SGP30 sgp;
-Adafruit_VCNL4010 vc;
-Adafruit_VCNL4040 vcnl = Adafruit_VCNL4040();
 Adafruit_VL6180X vl = Adafruit_VL6180X();
-RFD77402 rfd;
 QWIIC_POWER mySwitch;
-bool SGP = false; // SGP30
-bool VC = false; // vcnl4010
-bool RFD = false; // sfe rfd ToF, best
-bool VCNL = false; // adafruit vcnl4040
-bool VL = true; // adafruit vl6180
 
 // HEY HEY HEY IT'S Trotz Idee
 /*
@@ -240,7 +216,7 @@ bool VL = true; // adafruit vl6180
 #define SAMPLE_DEPTH 225  // this is determined by GRAPH_W
 #define DISPLAY_UPDATE_LOOPS 3
 #define SENSOR_MAX 2048
-#define TICK_INTERVAL 15
+#define TICK_INTERVAL 15 // every 15 samples, we have a "tick" for visual distinction. If each sample is 75s, each tick width=18.75 minutes
 // want screen to show last 3 hours -> 180 minutes, so if we sample every 1.25 minutes->75secs
 // we'll have a series 225samples/pixels long, leaving enough for axes and borders
 #define LOOP_DELAY_SECS 75  // every tick is 75 secs; 250ticks = 312.5mins = 5.2 hours
@@ -285,6 +261,7 @@ int bmpWidth = 150, bmpHeight = 39;
 //lilygo bmp is width:150,height:39
 const unsigned char lilygo[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xf7, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x31, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0xfc, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0d, 0xfe, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x19, 0xff, 0x20, 0x7f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x07, 0xf8, 0x0f, 0xf0, 0x00, 0xfe, 0x00, 0x03, 0xff, 0x80, 0x19, 0xe7, 0x30, 0x7f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x07, 0xfc, 0x0f, 0xf0, 0x07, 0xff, 0xc0, 0x0f, 0xff, 0xe0, 0x19, 0xe7, 0xb0, 0x7f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x03, 0xfc, 0x1f, 0xe0, 0x0f, 0xff, 0xe0, 0x1f, 0xff, 0xf8, 0x19, 0xff, 0x10, 0x7f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x03, 0xfe, 0x1f, 0xe0, 0x1f, 0xff, 0xf0, 0x3f, 0xff, 0xfc, 0x19, 0xff, 0x10, 0x3f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x03, 0xfe, 0x1f, 0xc0, 0x3f, 0xff, 0xf0, 0x7f, 0xff, 0xfe, 0x19, 0xfe, 0x10, 0x3f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x01, 0xfe, 0x3f, 0xc0, 0x7f, 0xff, 0xe0, 0x7f, 0xff, 0xfe, 0x19, 0xfe, 0x10, 0x3f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x01, 0xff, 0x3f, 0x80, 0xff, 0xc7, 0xc0, 0xff, 0xff, 0xff, 0x1d, 0xfe, 0x10, 0x3f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x00, 0xff, 0x7f, 0x80, 0xff, 0x81, 0x80, 0xff, 0xef, 0xff, 0x1d, 0xef, 0x00, 0x3f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x00, 0xff, 0xff, 0x00, 0xff, 0x00, 0x00, 0xff, 0xc3, 0xff, 0x8f, 0xef, 0x00, 0x3f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x00, 0x7f, 0xff, 0x01, 0xff, 0x00, 0x01, 0xff, 0xc3, 0xff, 0x8f, 0x87, 0x80, 0x3f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x00, 0x7f, 0xfe, 0x01, 0xfe, 0x00, 0x01, 0xff, 0xc1, 0xff, 0x87, 0x81, 0xc0, 0x3f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x00, 0x7f, 0xfe, 0x01, 0xfe, 0x1f, 0x81, 0xff, 0x81, 0xff, 0x83, 0xff, 0x80, 0x3f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x00, 0x3f, 0xfc, 0x01, 0xfe, 0x3f, 0xf9, 0xff, 0x81, 0xff, 0x80, 0xfe, 0x00, 0x3f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x00, 0x3f, 0xfc, 0x01, 0xfe, 0x3f, 0xf9, 0xff, 0x81, 0xff, 0x80, 0x00, 0x00, 0x3f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x00, 0x1f, 0xf8, 0x01, 0xfe, 0x3f, 0xf9, 0xff, 0x81, 0xff, 0x80, 0x00, 0x00, 0x3f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x00, 0x1f, 0xf0, 0x01, 0xff, 0x3f, 0xf9, 0xff, 0xc1, 0xff, 0x80, 0x00, 0x00, 0x3f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x00, 0x0f, 0xf0, 0x01, 0xff, 0x3f, 0xf8, 0xff, 0xc1, 0xff, 0x80, 0x00, 0x00, 0x3f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x00, 0x0f, 0xf0, 0x00, 0xff, 0x9f, 0xf8, 0xff, 0xc1, 0xff, 0x80, 0x00, 0x00, 0x3f, 0xc0, 0x03, 0xfc, 0x7f, 0x80, 0x00, 0x0f, 0xf0, 0x00, 0xff, 0x83, 0xf0, 0xff, 0xe1, 0xff, 0x00, 0x00, 0x00, 0x3f, 0xfc, 0x03, 0xfc, 0x7f, 0xf8, 0x00, 0x0f, 0xf0, 0x00, 0xff, 0xe3, 0xf0, 0x7f, 0xff, 0xff, 0x00, 0x00, 0x00, 0x3f, 0xff, 0xe3, 0xfc, 0x7f, 0xff, 0xc0, 0x0f, 0xf0, 0x00, 0x7f, 0xff, 0xf0, 0x7f, 0xff, 0xfe, 0x00, 0x00, 0x00, 0x3f, 0xff, 0xe3, 0xfc, 0x7f, 0xff, 0xc0, 0x0f, 0xf0, 0x00, 0x7f, 0xff, 0xf0, 0x3f, 0xff, 0xfe, 0x00, 0x00, 0x00, 0x3f, 0xff, 0xe3, 0xfc, 0x7f, 0xff, 0xc0, 0x0f, 0xf0, 0x00, 0x3f, 0xff, 0xf0, 0x3f, 0xff, 0xfc, 0x00, 0x00, 0x00, 0x3f, 0xff, 0xe3, 0xfc, 0x7f, 0xff, 0xc0, 0x0f, 0xf0, 0x00, 0x1f, 0xff, 0xf0, 0x1f, 0xff, 0xfc, 0x00, 0x00, 0x00, 0x3f, 0xff, 0xe3, 0xf8, 0x7f, 0xff, 0xc0, 0x0f, 0xf0, 0x00, 0x0f, 0xff, 0xf0, 0x0f, 0xff, 0xf8, 0x00, 0x00, 0x00, 0x1f, 0xff, 0xc3, 0xf8, 0x1f, 0xff, 0xc0, 0x0f, 0xe0, 0x00, 0x03, 0xff, 0xe0, 0x03, 0xff, 0xe0, 0x00, 0x00, 0x00, 0x00, 0x3f, 0xc0, 0xf0, 0x00, 0x3f, 0x80, 0x07, 0xe0, 0x00, 0x00, 0xff, 0x80, 0x01, 0xff, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
+// VL6180 distance sensor (mm)
 int series1[SAMPLE_DEPTH] = {0};
 int series1der[SAMPLE_DEPTH] = {0};
 int series1max = 0;
@@ -294,6 +271,7 @@ int series1min_h = 2000; // _h means all-time max and min
 int series1dermin = 0;
 int series1dermax = 0;
 
+// SCD30 CO2 sensor (ppm)
 int series2[SAMPLE_DEPTH] = {0};
 int series2der[SAMPLE_DEPTH] = {0};
 int series2max = 0;
@@ -302,6 +280,26 @@ int series2max_h = 0; // _h means all-time max and min
 int series2min_h = 2000; // _h means all-time max and min
 int series2dermin = 0;
 int series2dermax = 0;
+
+// SCD30 Temperature Sensor (C)
+int series3[SAMPLE_DEPTH] = {0};
+int series3der[SAMPLE_DEPTH] = {0};
+int series3max = 0;
+int series3min = 2000;
+int series3max_h = 0; // _h means all-time max and min
+int series3min_h = 2000; // _h means all-time max and min
+int series3dermin = 0;
+int series3dermax = 0;
+
+// SCD30 Relative Humidity Sensor (percent)
+int series4[SAMPLE_DEPTH] = {0};
+int series4der[SAMPLE_DEPTH] = {0};
+int series4max = 0;
+int series4min = 2000;
+int series4max_h = 0; // _h means all-time max and min
+int series4min_h = 2000; // _h means all-time max and min
+int series4dermin = 0;
+int series4dermax = 0;
 
 const char *starterName = "LENNY-GASSO";
 bool sdOK = false;
@@ -454,248 +452,12 @@ const int PIN_LED = 2; // D4 on NodeMCU and WeMos. GPIO2/ADC12 of ESP32. Control
 WiFi_AP_IPConfig  WM_AP_IPconfig;
 WiFi_STA_IPConfig WM_STA_IPconfig;
 
-void initAPIPConfigStruct(WiFi_AP_IPConfig &in_WM_AP_IPconfig)
-{
-  in_WM_AP_IPconfig._ap_static_ip   = APStaticIP;
-  in_WM_AP_IPconfig._ap_static_gw   = APStaticGW;
-  in_WM_AP_IPconfig._ap_static_sn   = APStaticSN;
-}
-
-void initSTAIPConfigStruct(WiFi_STA_IPConfig &in_WM_STA_IPconfig)
-{
-  in_WM_STA_IPconfig._sta_static_ip   = stationIP;
-  in_WM_STA_IPconfig._sta_static_gw   = gatewayIP;
-  in_WM_STA_IPconfig._sta_static_sn   = netMask;
-#if USE_CONFIGURABLE_DNS
-  in_WM_STA_IPconfig._sta_static_dns1 = dns1IP;
-  in_WM_STA_IPconfig._sta_static_dns2 = dns2IP;
-#endif
-}
-
-void displayIPConfigStruct(WiFi_STA_IPConfig in_WM_STA_IPconfig)
-{
-  LOGERROR3(F("stationIP ="), in_WM_STA_IPconfig._sta_static_ip, ", gatewayIP =", in_WM_STA_IPconfig._sta_static_gw);
-  LOGERROR1(F("netMask ="), in_WM_STA_IPconfig._sta_static_sn);
-#if USE_CONFIGURABLE_DNS
-  LOGERROR3(F("dns1IP ="), in_WM_STA_IPconfig._sta_static_dns1, ", dns2IP =", in_WM_STA_IPconfig._sta_static_dns2);
-#endif
-}
-
-void configWiFi(WiFi_STA_IPConfig in_WM_STA_IPconfig)
-{
-#if USE_CONFIGURABLE_DNS
-  // Set static IP, Gateway, Subnetmask, DNS1 and DNS2. New in v1.0.5
-  WiFi.config(in_WM_STA_IPconfig._sta_static_ip, in_WM_STA_IPconfig._sta_static_gw, in_WM_STA_IPconfig._sta_static_sn, in_WM_STA_IPconfig._sta_static_dns1, in_WM_STA_IPconfig._sta_static_dns2);
-#else
-  // Set static IP, Gateway, Subnetmask, Use auto DNS1 and DNS2.
-  WiFi.config(in_WM_STA_IPconfig._sta_static_ip, in_WM_STA_IPconfig._sta_static_gw, in_WM_STA_IPconfig._sta_static_sn);
-#endif
-}
 
 ///////////////////////////////////////////
 
-uint8_t connectMultiWiFi()
-{
-#if ESP32
-  // For ESP32, this better be 0 to shorten the connect time.
-  // For ESP32-S2, must be > 500
-#if ( ARDUINO_ESP32S2_DEV || ARDUINO_FEATHERS2 || ARDUINO_PROS2 || ARDUINO_MICROS2 )
-#define WIFI_MULTI_1ST_CONNECT_WAITING_MS           500L
-#else
-  // For ESP32 core v1.0.6, must be >= 500
-#define WIFI_MULTI_1ST_CONNECT_WAITING_MS           800L
-#endif
-#else
-  // For ESP8266, this better be 2200 to enable connect the 1st time
-#define WIFI_MULTI_1ST_CONNECT_WAITING_MS             2200L
-#endif
 
-#define WIFI_MULTI_CONNECT_WAITING_MS                   100L
 
-  uint8_t status;
 
-  LOGERROR(F("ConnectMultiWiFi with :"));
-
-  if ( (Router_SSID != "") && (Router_Pass != "") )
-  {
-    LOGERROR3(F("* Flash-stored Router_SSID = "), Router_SSID, F(", Router_Pass = "), Router_Pass );
-  }
-
-  for (uint8_t i = 0; i < NUM_WIFI_CREDENTIALS; i++)
-  {
-    // Don't permit NULL SSID and password len < MIN_AP_PASSWORD_SIZE (8)
-    if ( (String(WM_config.WiFi_Creds[i].wifi_ssid) != "") && (strlen(WM_config.WiFi_Creds[i].wifi_pw) >= MIN_AP_PASSWORD_SIZE) )
-    {
-      LOGERROR3(F("* Additional SSID = "), WM_config.WiFi_Creds[i].wifi_ssid, F(", PW = "), WM_config.WiFi_Creds[i].wifi_pw );
-    }
-  }
-
-  LOGERROR(F("Connecting MultiWifi..."));
-
-  WiFi.mode(WIFI_STA);
-
-#if !USE_DHCP_IP
-  // New in v1.4.0
-  configWiFi(WM_STA_IPconfig);
-  //////
-#endif
-
-  int i = 0;
-  status = wifiMulti.run();
-  delay(WIFI_MULTI_1ST_CONNECT_WAITING_MS);
-
-  while ( ( i++ < 20 ) && ( status != WL_CONNECTED ) )
-  {
-    status = wifiMulti.run();
-
-    if ( status == WL_CONNECTED )
-      break;
-    else
-      delay(WIFI_MULTI_CONNECT_WAITING_MS);
-  }
-
-  if ( status == WL_CONNECTED )
-  {
-    LOGERROR1(F("WiFi connected after time: "), i);
-    LOGERROR3(F("SSID:"), WiFi.SSID(), F(",RSSI="), WiFi.RSSI());
-    LOGERROR3(F("Channel:"), WiFi.channel(), F(",IP address:"), WiFi.localIP() );
-  }
-  else
-    LOGERROR(F("WiFi not connected"));
-
-  return status;
-}
-
-void toggleLED()
-{
-  //toggle state
-  digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-}
-
-void heartBeatPrint()
-{
-  static int num = 1;
-
-  if (WiFi.status() == WL_CONNECTED)
-    Serial.print(F("H "));        // H means connected to WiFi
-  else
-    Serial.print(F("F "));        // F means not connected to WiFi
-
-  if (num == 80)
-  {
-    Serial.println();
-    num = 1;
-  }
-  else if (num++ % 10 == 0)
-  {
-    Serial.print(F(" "));
-  }
-}
-
-void check_WiFi()
-{
-  if ( (WiFi.status() != WL_CONNECTED) )
-  {
-    Serial.println(F("\nWiFi lost. Call connectMultiWiFi in loop"));
-    connectMultiWiFi();
-  }
-}
-
-void check_status()
-{
-  static ulong checkstatus_timeout  = 0;
-  static ulong LEDstatus_timeout    = 0;
-  static ulong checkwifi_timeout    = 0;
-
-  static ulong current_millis;
-
-#define WIFICHECK_INTERVAL    1000L
-#define LED_INTERVAL          2000L
-#define HEARTBEAT_INTERVAL    10000L
-
-  current_millis = millis();
-
-  // Check WiFi every WIFICHECK_INTERVAL (1) seconds.
-  if ((current_millis > checkwifi_timeout) || (checkwifi_timeout == 0))
-  {
-    check_WiFi();
-    checkwifi_timeout = current_millis + WIFICHECK_INTERVAL;
-  }
-
-  if ((current_millis > LEDstatus_timeout) || (LEDstatus_timeout == 0))
-  {
-    // Toggle LED at LED_INTERVAL = 2s
-    toggleLED();
-    LEDstatus_timeout = current_millis + LED_INTERVAL;
-  }
-
-  // Print hearbeat every HEARTBEAT_INTERVAL (10) seconds.
-  if ((current_millis > checkstatus_timeout) || (checkstatus_timeout == 0))
-  {
-    heartBeatPrint();
-    checkstatus_timeout = current_millis + HEARTBEAT_INTERVAL;
-  }
-}
-
-bool loadConfigData()
-{
-  File file = FileFS.open(CONFIG_FILENAME, "r");
-  LOGERROR(F("LoadWiFiCfgFile "));
-
-  memset(&WM_config,       0, sizeof(WM_config));
-
-  // New in v1.4.0
-  memset(&WM_STA_IPconfig, 0, sizeof(WM_STA_IPconfig));
-  //////
-
-  if (file)
-  {
-    file.readBytes((char *) &WM_config,   sizeof(WM_config));
-
-    // New in v1.4.0
-    file.readBytes((char *) &WM_STA_IPconfig, sizeof(WM_STA_IPconfig));
-    //////
-
-    file.close();
-    LOGERROR(F("OK"));
-
-    // New in v1.4.0
-    displayIPConfigStruct(WM_STA_IPconfig);
-    //////
-
-    return true;
-  }
-  else
-  {
-    LOGERROR(F("failed"));
-
-    return false;
-  }
-}
-
-void saveConfigData()
-{
-  File file = FileFS.open(CONFIG_FILENAME, "w");
-  LOGERROR(F("SaveWiFiCfgFile "));
-
-  if (file)
-  {
-    file.write((uint8_t*) &WM_config,   sizeof(WM_config));
-
-    displayIPConfigStruct(WM_STA_IPconfig);
-
-    // New in v1.4.0
-    file.write((uint8_t*) &WM_STA_IPconfig, sizeof(WM_STA_IPconfig));
-    //////
-
-    file.close();
-    LOGERROR(F("OK"));
-  }
-  else
-  {
-    LOGERROR(F("failed"));
-  }
-}
 
 void setup()
 {
@@ -839,14 +601,14 @@ void setup()
     wifiMulti.addAP(Router_SSID.c_str(), Router_Pass.c_str());
 
     ESPAsync_wifiManager.setConfigPortalTimeout(PORTAL_TIMEOUT); //If no access point name has been previously entered disable timeout.
-    Serial.println(F("Got ESP Self-Stored Credentials. Timeout 120s for Config Portal"));
+    Serial.println(F("Got ESP Self-Stored Credentials. Timeout 40s for Config Portal"));
   }
   else if (loadConfigData())
   {
     configDataLoaded = true;
 
     ESPAsync_wifiManager.setConfigPortalTimeout(PORTAL_TIMEOUT); //If no access point name has been previously entered disable timeout.
-    Serial.println(F("Got stored Credentials. Timeout 120s for Config Portal"));
+    Serial.println(F("Got stored Credentials. Timeout 40s for Config Portal"));
   }
   else
   {
