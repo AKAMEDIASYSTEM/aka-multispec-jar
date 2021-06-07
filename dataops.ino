@@ -303,7 +303,5 @@ void sampler() {
   }
 
 
-
-
   stopFan();
 }
