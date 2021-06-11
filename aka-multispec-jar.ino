@@ -172,7 +172,8 @@ Adafruit_VL6180X vl = Adafruit_VL6180X();
   - Resolution 250x122
   Driver chip：SSD1680Z8
 */
-#include <GxGDEH0213B73/GxGDEH0213B73.h>  // 2.13" b/w newer panel THIS ONE IS AKA LILYGO JAN 2021
+//#include <GxGDEH0213B73/GxGDEH0213B73.h>  // 2.13" b/w newer panel THIS ONE IS AKA LILYGO JAN 2021
+#include <GxDEPG0213BN/GxDEPG0213BN.h> // this is the newer, May 2021 board with no LEDs onboard
 // FreeFonts from Adafruit_GFX
 #include <Fonts/FreeMonoBold9pt7b.h>
 #include <Fonts/FreeMonoBold12pt7b.h>
@@ -723,7 +724,7 @@ void loop()
   // update the screen every DISPLAY_UPDATE_LOOPs
   sc++;
   if (sc == DISPLAY_UPDATE_LOOPS) {
-    if (VERBOSE) {
+    if (DEBUG) {
       Serial.println("UPDATE_SCREEN triggered");
     }
     sc = 0;
