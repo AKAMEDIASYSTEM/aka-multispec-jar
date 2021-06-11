@@ -54,28 +54,14 @@ void clobber() {
 
 
 void startFan() {
-  if (mySwitch.isConnected()) {
-    mySwitch.powerOn();
-  } else {
-    Serial.println("START FAN FAILED");
-  }
+  digitalWrite(FAN_PIN, HIGH);
   if (VERBOSE) {
     Serial.println("FAN ON");
   }
 }
 
 void stopFan() {
-  if (mySwitch.isConnected()) {
-    mySwitch.powerOff();
-    mySwitch.powerOff();
-    mySwitch.powerOff();
-    mySwitch.powerOff();
-    mySwitch.powerOff();
-    mySwitch.powerOff();
-    mySwitch.powerOff();
-  } else {
-    Serial.println("STOP FAN FAILED");
-  }
+  digitalWrite(FAN_PIN, LOW);
   if (VERBOSE) {
     Serial.println("FAN OFF");
   }

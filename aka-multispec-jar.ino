@@ -159,11 +159,8 @@ FS* filesystem = &SPIFFS;
 #include "SPI.h"
 #include "Adafruit_VL6180X.h"
 #include <Adafruit_SCD30.h>
-#include <SparkFun_Qwiic_Power_Switch_Arduino_Library.h>
 Adafruit_SCD30 scd;
 Adafruit_VL6180X vl = Adafruit_VL6180X();
-QWIIC_POWER mySwitch;
-
 // HEY HEY HEY IT'S Trotz Idee
 /*
   · Operating voltage: 3.3V
@@ -304,7 +301,7 @@ int series4min_h = 2000; // _h means all-time max and min
 int series4dermin = 0;
 int series4dermax = 0;
 
-const char *starterName = "LENNY-GASSO";
+const char *starterName = "LENNY-GASSY";
 bool sdOK = false;
 int startX = 5, startY = 5;
 unsigned int distance = 0;
@@ -432,7 +429,9 @@ const int PIN_LED = 2; // D4 on NodeMCU and WeMos. GPIO2/ADC12 of ESP32. Control
 AsyncMqttClient mqttClient;
 IPAddress MQTT_HOST      = IPAddress(192,168,0,105);
 #define MQTT_PORT 1883
-#define MQTT_PUB_TOPIC "jar"
+String topicString = "jar/" + String(ESP_getChipId(), HEX);
+//MQTT_PUB_TOPIC = topicName.c_str();
+//#define MQTT_PUB_TOPIC "jar"
 
 ///////////////////////////////////////////
 // New in v1.4.0
@@ -484,29 +483,14 @@ void setup()
   display.setTextColor(GxEPD_BLACK);
   display.setFont(&FreeMonoBold9pt7b);
   display.setCursor(0, 0);
-  sdSPI.begin(SDCARD_CLK, SDCARD_MISO, SDCARD_MOSI, SDCARD_SS);
   Serial.println("setup: AKA-JAR, multispec-jar version");
-  if (!SD.begin(SDCARD_SS, sdSPI)) {
-    sdOK = false;
-  } else {
-    sdOK = true;
-  }
   initSensors();
   display.fillScreen(GxEPD_WHITE);
   display.setTextColor(GxEPD_BLACK);
   display.setCursor(NAME_X, NAME_Y);
   display.setFont(&FreeSansBoldOblique9pt7b);
   display.print(starterName);
-  mySwitch.begin();
-  mySwitch.pinMode(1, OUTPUT);
   stopFan();
-
-  //  if (sdOK) {
-  //    uint32_t cardSize = SD.cardSize() / (1024 * 1024);
-  //    display.println("SDCard:" + String(cardSize) + "MB");
-  //  } else {
-  //    display.println("SDCard  None");
-  //  }
   //  clobber();
   display.update();
   // goto sleep
@@ -719,6 +703,8 @@ void setup()
   else {
     Serial.println(ESPAsync_wifiManager.getStatus(WiFi.status()));
   }
+
+  
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
   mqttClient.onPublish(onMqttPublish);

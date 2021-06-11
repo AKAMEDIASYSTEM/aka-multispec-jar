@@ -269,7 +269,7 @@ void publishMQTT() {
   payload["tmp"] =  series3[0];
   payload["rh"] = series4[0];
   String jsonString = JSON.stringify(payload);
-  uint16_t packetIdPub1 = mqttClient.publish(MQTT_PUB_TOPIC, 1, true, jsonString.c_str());
+  uint16_t packetIdPub1 = mqttClient.publish(topicString.c_str(), 1, true, jsonString.c_str());
   if (DEBUG) {
     Serial.print("publish result is ");
     Serial.println(packetIdPub1);
