@@ -55,14 +55,14 @@ void clobber() {
 
 void startFan() {
   digitalWrite(FAN_PIN, HIGH);
-  if (VERBOSE) {
+  if (DEBUG) {
     Serial.println("FAN ON");
   }
 }
 
 void stopFan() {
   digitalWrite(FAN_PIN, LOW);
-  if (VERBOSE) {
+  if (DEBUG) {
     Serial.println("FAN OFF");
   }
 }

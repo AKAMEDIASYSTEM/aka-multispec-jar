@@ -222,9 +222,9 @@ Adafruit_VL6180X vl = Adafruit_VL6180X();
 #define TICK_INTERVAL 15 // every 15 samples, we have a "tick" for visual distinction. If each sample is 75s, each tick width=18.75 minutes
 // want screen to show last 3 hours -> 180 minutes, so if we sample every 1.25 minutes->75secs
 // we'll have a series 225samples/pixels long, leaving enough for axes and borders
-#define LOOP_DELAY_SECS 75  // every tick is 75 secs; 250ticks = 312.5mins = 5.2 hours
+//#define LOOP_DELAY_SECS 75  // every tick is 75 secs; 250ticks = 312.5mins = 5.2 hours
 //#define LOOP_DELAY_SECS 15  // every tick is 15 secs; 250ticks = 62.5mins
-//#define LOOP_DELAY_SECS 5  // every tick is 5 secs; 250ticks = 20.8mins
+#define LOOP_DELAY_SECS 5  // every tick is 5 secs; 250ticks = 20.8mins
 #define FAN_DURATION_MS 5000 // length of time DURING the sampler() function that fan runs before we read the sensors
 #define VERBOSE 0
 #define DEBUG 1
@@ -302,7 +302,8 @@ int series4min_h = 2000; // _h means all-time max and min
 int series4dermin = 0;
 int series4dermax = 0;
 
-const char *starterName = "LENNY-GASSY";
+const char *starterName = "LENNY-FANNY"; // this one should be jar/FAC40A24
+//const char *starterName = "LENNY-GASSY";  // this one should be jar/60A8CC84
 bool sdOK = false;
 int startX = 5, startY = 5;
 unsigned int distance = 0;
@@ -430,7 +431,8 @@ const int PIN_LED = 2; // D4 on NodeMCU and WeMos. GPIO2/ADC12 of ESP32. Control
 AsyncMqttClient mqttClient;
 IPAddress MQTT_HOST      = IPAddress(192,168,0,105);
 #define MQTT_PORT 1883
-String topicString = "jar/" + String(ESP_getChipId(), HEX);
+//String topicString = "jar/" + String(ESP_getChipId(), HEX);
+String topicString = String(ESP_getChipId(), HEX);
 //MQTT_PUB_TOPIC = topicName.c_str();
 //#define MQTT_PUB_TOPIC "jar"
 

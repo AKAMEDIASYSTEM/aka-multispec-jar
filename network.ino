@@ -272,6 +272,7 @@ void publishMQTT() {
   uint16_t packetIdPub1 = mqttClient.publish(topicString.c_str(), 1, true, jsonString.c_str());
   if (DEBUG) {
     Serial.print("publish result is ");
+    Serial.println(topicString);
     Serial.println(packetIdPub1);
     Serial.println(jsonString);
   }
