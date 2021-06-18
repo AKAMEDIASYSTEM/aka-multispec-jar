@@ -293,5 +293,10 @@ void sampler() {
 }
 
 boolean inFridge(){
-  return(true : false ? (series2[0] < FRIDGE_THRESHOLD_TEMPERATURE));
+  bool testy = (series2[0] < FRIDGE_THRESHOLD_TEMPERATURE) ? true : false);
+  if(DEBUG){
+    Serial.print("We are in the fridge: ");
+    Serial.println(testy);
+  }
+  return testy;
 }

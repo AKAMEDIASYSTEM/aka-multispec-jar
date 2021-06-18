@@ -239,6 +239,7 @@ int startX = 5;
 int startY = 5;
 
 // DATA AND TIMING PARAMS
+#define FRIDGE_THRESHOLD_TEMPERATURE 8 // at what ºC do we assume we are in fridge
 #define SAMPLE_DEPTH 225  // this is determined by GRAPH_W or how good you want your data to be
 #define DISPLAY_UPDATE_LOOPS 3  // don't update every loop; update every X loops
 #define SENSOR_MAX 2048
