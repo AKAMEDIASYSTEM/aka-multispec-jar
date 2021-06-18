@@ -291,3 +291,7 @@ void sampler() {
 
   stopFan();
 }
+
+boolean inFridge(){
+  return(true : false ? (series2[0] < FRIDGE_THRESHOLD_TEMPERATURE));
+}

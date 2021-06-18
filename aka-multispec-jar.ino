@@ -10,7 +10,7 @@
    Monitor starter params
 
 
-   Update to web when possible
+   Update via MQTT to web when possible
 
 
    Accept "I fed you" user input buttonpress
@@ -18,7 +18,12 @@
    LED PIN is 19, active LOW
    Button pin is 39,
    Has an ADC on pin 35
-   contrivance to power a mini fan via a qwiic power switch that powers a qwiic boost module
+   
+  series1 - distance in mm from underside of lid to target (from VL6180 over i2c)
+  series2 - co2 ppm (from SCD30 over i2c)
+  series3 - temp ºC (from SHT3 onboard SCD30)
+  series4 - percent humidity (from SHT3 onboard SCD30)
+
 
 */
 /****************************************************************************************************************************
@@ -199,38 +204,25 @@ Adafruit_VL6180X vl = Adafruit_VL6180X();
 #include <Fonts/Org_01.h>
 #include <GxIO/GxIO_SPI/GxIO_SPI.h>
 #include <GxIO/GxIO.h>
+
+// PINS
 #define SPI_MOSI 23
 #define SPI_MISO -1
 #define SPI_CLK 18
-
 #define ELINK_SS 5
 #define ELINK_BUSY 4
 #define ELINK_RESET 16
 #define ELINK_DC 17
-
 #define SDCARD_SS 13
 #define SDCARD_CLK 14
 #define SDCARD_MOSI 15
 #define SDCARD_MISO 2
-
 #define BUTTON_PIN 39
 #define FAN_PIN 12
-#define MARGIN 5
-#define SAMPLE_DEPTH 225  // this is determined by GRAPH_W
-#define DISPLAY_UPDATE_LOOPS 3
-#define SENSOR_MAX 2048
-#define TICK_INTERVAL 15 // every 15 samples, we have a "tick" for visual distinction. If each sample is 75s, each tick width=18.75 minutes
-// want screen to show last 3 hours -> 180 minutes, so if we sample every 1.25 minutes->75secs
-// we'll have a series 225samples/pixels long, leaving enough for axes and borders
-#define LOOP_DELAY_SECS 75  // every tick is 75 secs; 250ticks = 312.5mins = 5.2 hours
-//#define LOOP_DELAY_SECS 15  // every tick is 15 secs; 250ticks = 62.5mins
-//#define LOOP_DELAY_SECS 5  // every tick is 5 secs; 250ticks = 20.8mins
-#define FAN_DURATION_MS 5000 // length of time DURING the sampler() function that fan runs before we read the sensors
-#define VERBOSE 0
-#define DEBUG 1
-#define PORTAL_TIMEOUT 40  // host own AP for PORTAL_TIMEOUT seconds before joining wifi using any saved credentials
 
-// Display consts
+
+// DISPLAY PARAMS
+#define MARGIN 5
 #define GRAPH_X 25
 #define GRAPH_W 225
 #define GRAPH_Y 40
@@ -243,7 +235,23 @@ Adafruit_VL6180X vl = Adafruit_VL6180X();
 #define TREND_W 25
 #define TREND_Y 25
 #define TREND_H 50
+int startX = 5;
+int startY = 5;
 
+// DATA AND TIMING PARAMS
+#define SAMPLE_DEPTH 225  // this is determined by GRAPH_W or how good you want your data to be
+#define DISPLAY_UPDATE_LOOPS 3  // don't update every loop; update every X loops
+#define SENSOR_MAX 2048
+#define TICK_INTERVAL 15  // every n samples, we have a "tick" for visual distinction. 
+#define LOOP_DELAY_SECS 60  // sample once per minute; tick-to-tick interval is 16 minutes; total graph shows last 3.75h
+#define FAN_DURATION_MS 5000 // length of time DURING the sampler() function that fan runs before we read the sensors
+#define VERBOSE 0
+#define DEBUG 1
+#define PORTAL_TIMEOUT 40  // host own AP for PORTAL_TIMEOUT seconds before joining wifi using any saved credentials
+
+//const char *starterName = "LENNY-FANNY"; // this one should be jar/FAC40A24
+//const char *starterName = "LENNY-GASSY";  // this one should be jar/60A8CC84
+String starterName = "LENNY-" + String(ESP_getChipId(), HEX);
 
 #ifndef _swap_int16_t
 #define _swap_int16_t(a, b)                                                    \
@@ -302,16 +310,10 @@ int series4min_h = 2000; // _h means all-time max and min
 int series4dermin = 0;
 int series4dermax = 0;
 
-//const char *starterName = "LENNY-FANNY"; // this one should be jar/FAC40A24
-//const char *starterName = "LENNY-GASSY";  // this one should be jar/60A8CC84
-String starterName = "LENNY-" + String(ESP_getChipId(), HEX);
 bool sdOK = false;
-int startX = 5, startY = 5;
 unsigned int distance = 0;
 unsigned int gas = 0;
 int sc = 0;
-bool nearby = false;
-int NEARBY_THRESHOLD = 1000;
 
 // SSID and PW for Config Portal
 String ssid = "aka_" + String(ESP_getChipId(), HEX);
@@ -727,7 +729,9 @@ void loop()
 
   // sample every LOOP_DELAY seconds
   sampler();
+  if(!inFridge()){
   publishMQTT();
+}
   // update the screen every DISPLAY_UPDATE_LOOPs
   sc++;
   if (sc == DISPLAY_UPDATE_LOOPS) {
