@@ -18,7 +18,7 @@
    LED PIN is 19, active LOW
    Button pin is 39,
    Has an ADC on pin 35
-   
+
   series1 - distance in mm from underside of lid to target (from VL6180 over i2c)
   series2 - co2 ppm (from SCD30 over i2c)
   series3 - temp ºC (from SHT3 onboard SCD30)
@@ -223,10 +223,10 @@ Adafruit_VL6180X vl = Adafruit_VL6180X();
 
 // DISPLAY PARAMS
 #define MARGIN 5
-#define GRAPH_X 25
 #define GRAPH_W 225
-#define GRAPH_Y 40
 #define GRAPH_H 40
+#define GRAPH_Y 40
+#define GRAPH_X 25
 #define NAME_X 0
 #define NAME_W 150
 #define NAME_Y 15
@@ -248,7 +248,7 @@ int startY = 5;
 #define FAN_DURATION_MS 5000 // length of time DURING the sampler() function that fan runs before we read the sensors
 #define VERBOSE 0
 #define DEBUG 1
-#define PORTAL_TIMEOUT 40  // host own AP for PORTAL_TIMEOUT seconds before joining wifi using any saved credentials
+#define PORTAL_TIMEOUT 30  // host own AP for PORTAL_TIMEOUT seconds before joining wifi using any saved credentials
 
 //const char *starterName = "LENNY-FANNY"; // this one should be jar/FAC40A24
 //const char *starterName = "LENNY-GASSY";  // this one should be jar/60A8CC84
@@ -280,6 +280,9 @@ int series1max_h = 0; // _h means all-time max and min
 int series1min_h = 2000; // _h means all-time max and min
 int series1dermin = 0;
 int series1dermax = 0;
+// if the range of the series is less than this we display a flattened graph
+// pick a sensor-dependent value above noise floor
+int SERIES1_SIGNIFICANCE_THRESHOLD = 12;
 
 // SCD30 CO2 sensor (ppm)
 int series2[SAMPLE_DEPTH] = {0};
@@ -290,6 +293,7 @@ int series2max_h = 0; // _h means all-time max and min
 int series2min_h = 2000; // _h means all-time max and min
 int series2dermin = 0;
 int series2dermax = 0;
+int SERIES2_SIGNIFICANCE_THRESHOLD = 10;
 
 // SCD30 Temperature Sensor (C)
 int series3[SAMPLE_DEPTH] = {0};
@@ -300,6 +304,7 @@ int series3max_h = 0; // _h means all-time max and min
 int series3min_h = 2000; // _h means all-time max and min
 int series3dermin = 0;
 int series3dermax = 0;
+int SERIES3_SIGNIFICANCE_THRESHOLD = 10;
 
 // SCD30 Relative Humidity Sensor (percent)
 int series4[SAMPLE_DEPTH] = {0};
@@ -310,8 +315,10 @@ int series4max_h = 0; // _h means all-time max and min
 int series4min_h = 2000; // _h means all-time max and min
 int series4dermin = 0;
 int series4dermax = 0;
+int SERIES4_SIGNIFICANCE_THRESHOLD = 10;
 
 bool sdOK = false;
+bool firstReading = true;
 unsigned int distance = 0;
 unsigned int gas = 0;
 int sc = 0;
@@ -489,7 +496,7 @@ void setup()
   display.setTextColor(GxEPD_BLACK);
   display.setFont(&FreeMonoBold9pt7b);
   display.setCursor(0, 0);
-  Serial.println("setup: AKA-JAR, multispec-jar version");
+  Serial.println("setup: AKA-JAR");
   initSensors();
   display.fillScreen(GxEPD_WHITE);
   display.setTextColor(GxEPD_BLACK);
@@ -497,8 +504,8 @@ void setup()
   display.setFont(&FreeSansBoldOblique9pt7b);
   display.print(starterName);
   stopFan();
-  //  clobber();
-  display.update();
+  // clobber(false);
+  // display.update();
   // goto sleep
   //  esp_sleep_enable_ext0_wakeup((gpio_num_t)BUTTON_PIN, LOW);
   //  esp_deep_sleep_start();
@@ -717,9 +724,10 @@ void setup()
   mqttClient.onPublish(onMqttPublish);
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
 
-  display.fillScreen(GxEPD_WHITE);
+  //  display.fillScreen(GxEPD_WHITE);
   drawName();
-  display.updateWindow(0, 0, GxEPD_WIDTH, GxEPD_HEIGHT, false);
+  //  display.updateWindow(0, 0, GxEPD_WIDTH, GxEPD_HEIGHT, false);
+  display.update();
 }
 
 
@@ -730,9 +738,9 @@ void loop()
 
   // sample every LOOP_DELAY seconds
   sampler();
-  if(!inFridge()){
-  publishMQTT();
-}
+  if (!inFridge()) {
+    publishMQTT();
+  }
   // update the screen every DISPLAY_UPDATE_LOOPs
   sc++;
   if (sc == DISPLAY_UPDATE_LOOPS) {
@@ -741,10 +749,16 @@ void loop()
     }
     sc = 0;
     display.fillScreen(GxEPD_WHITE);
-    drawGraph();
+    // drawGraph();
+    // drawGraph2(int series[], int seriesDepth, int sx, int sy, int sh, int sw, int s_min, int s_max, int s_thresh) {
+    //    drawGraph2(series1, SAMPLE_DEPTH, 25, GRAPH_H*3, GRAPH_H, GRAPH_W, series1min, series1max, SERIES1_SIGNIFICANCE_THRESHOLD);
+    //    drawGraph2(series2, SAMPLE_DEPTH, 25, GRAPH_H*2, GRAPH_H, GRAPH_W, series2min, series2max, SERIES2_SIGNIFICANCE_THRESHOLD);
+    drawGraph2(series1, SAMPLE_DEPTH, 25, (GRAPH_H * 2), GRAPH_H, GRAPH_W, series1min, series1max, SERIES1_SIGNIFICANCE_THRESHOLD);
+    drawGraph2(series2, SAMPLE_DEPTH, 25, GRAPH_H, GRAPH_H, GRAPH_W, series2min, series2max, SERIES2_SIGNIFICANCE_THRESHOLD);
     drawTrend();
     drawName();
-    display.updateWindow(0, 0, GxEPD_WIDTH, GxEPD_HEIGHT, false);
+    // display.updateWindow(0, 0, GxEPD_WIDTH, GxEPD_HEIGHT, false);
+    display.update();
   }
 
   if (VERBOSE) {

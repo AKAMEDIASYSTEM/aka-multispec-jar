@@ -1,5 +1,5 @@
-float summarize(int farback) {
-  float slope = ((series1[0] - series1[farback - 1]) / farback);
+float summarize(int series[], int farback) {
+  float slope = ((series[0] - series[farback - 1]) / farback);
   return slope;
 }
 
@@ -17,7 +17,6 @@ void initSensors() {
   } else {
     Serial.println("Sensor SCD30 online");
   }
-
 }
 
 int maxOf(int series[], int seriesDepth) {
@@ -40,18 +39,28 @@ int minOf(int series[], int seriesDepth) {
   return theMin;
 }
 
-void clobber() {
-  // fill timeseries with dummy init data for debugging purposes
+void backfill(int series[], int theVal) {
   for (int i = 0; i < SAMPLE_DEPTH; i++) {
-    series1[i] = random(0, 300);
-    series2[i] = random(400, 800);
-  }
-  Serial.println("Clobbered all data and filled with dummy data.");
-  if (VERBOSE) {
-    Serial.println("Clobbered all data and filled with dummy data.");
+    series[i] = theVal;
   }
 }
 
+void clobber(bool shouldZero) {
+  // fill timeseries with dummy init data for debugging purposes
+  for (int i = 0; i < SAMPLE_DEPTH; i++) {
+    if (shouldZero) {
+      series1[i] = 0;
+      series2[i] = 0;
+    } else {
+      series1[i] = random(0, 200);
+      series2[i] = random(400, 2000);
+    }
+  }
+  if (DEBUG) {
+    Serial.print("Clobbered all data ");
+    (shouldZero ? Serial.println("into zeroes") : Serial.println("into random"));
+  }
+}
 
 void startFan() {
   digitalWrite(FAN_PIN, HIGH);
@@ -124,6 +133,10 @@ void sampler() {
     series1[i + 1] = series1[i];
   }
   series1[0] = distance;
+  if (firstReading) {
+    //if first reading, backfill the series with this reading for easier graph sizing
+    backfill(series1, distance);
+  }
 
   series1max = maxOf(series1, SAMPLE_DEPTH);
   series1min = minOf(series1, SAMPLE_DEPTH);
@@ -176,6 +189,24 @@ void sampler() {
   series2[0] = gas;
   series3[0] = tmp;
   series4[0] = rh;
+
+  if (firstReading) {
+    //if first reading, backfill the series with this reading for easier graph sizing
+    if (DEBUG) {
+      Serial.print("firstReading was true, backfilling all the sensors: ");
+      Serial.print(distance);
+      Serial.print(" ");
+      Serial.print(gas);
+      Serial.print(" ");
+      Serial.print(tmp);
+      Serial.print(" ");
+      Serial.println(rh);
+    }
+    backfill(series2, gas);
+    backfill(series3, tmp);
+    backfill(series4, rh);
+    firstReading = false;
+  }
 
   series2max = maxOf(series2, SAMPLE_DEPTH);
   series2min = minOf(series2, SAMPLE_DEPTH);
@@ -252,7 +283,7 @@ void sampler() {
     Serial.print(series1min_h);
     Serial.print(" historical max: ");
     Serial.println(series1max_h);
-    
+
     Serial.print("gas is ");
     Serial.print(gas);
     Serial.print(" local min: ");
@@ -292,11 +323,11 @@ void sampler() {
   stopFan();
 }
 
-boolean inFridge(){
+boolean inFridge() {
   bool testy = (series2[0] < FRIDGE_THRESHOLD_TEMPERATURE) ? true : false;
-  if(DEBUG){
+  if (DEBUG) {
     Serial.print("We are in the fridge: ");
-    Serial.println(testy);
+    (testy ? Serial.println("yep") : Serial.println("nope"));
   }
   return testy;
 }
