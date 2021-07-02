@@ -245,14 +245,14 @@ int startY = 5;
 #define SENSOR_MAX 2048
 #define TICK_INTERVAL 15  // every n samples, we have a "tick" for visual distinction. 
 #define LOOP_DELAY_SECS 60  // sample once per minute; tick-to-tick interval is 16 minutes; total graph shows last 3.75h
-#define FAN_DURATION_MS 5000 // length of time DURING the sampler() function that fan runs before we read the sensors
+#define FAN_DURATION_MS 0 // length of time DURING the sampler() function that fan runs before we read the sensors
 #define VERBOSE 0
 #define DEBUG 1
 #define PORTAL_TIMEOUT 30  // host own AP for PORTAL_TIMEOUT seconds before joining wifi using any saved credentials
 
 //const char *starterName = "LENNY-FANNY"; // this one should be jar/FAC40A24
 //const char *starterName = "LENNY-GASSY";  // this one should be jar/60A8CC84
-String starterName = "LENNY-" + String(ESP_getChipId(), HEX);
+String starterName = "nofan-" + String(ESP_getChipId(), HEX);
 
 #ifndef _swap_int16_t
 #define _swap_int16_t(a, b)                                                    \
@@ -555,11 +555,11 @@ void setup()
   AsyncWebServer webServer(HTTP_PORT);
 
 #if ( ARDUINO_ESP32S2_DEV || ARDUINO_FEATHERS2 || ARDUINO_PROS2 || ARDUINO_MICROS2 )
-  ESPAsync_WiFiManager ESPAsync_wifiManager(&webServer, NULL, "AsyncConfigOnStartup");
+  ESPAsync_WiFiManager ESPAsync_wifiManager(&webServer, NULL, "aka-starter-jar");
 #else
   DNSServer dnsServer;
 
-  ESPAsync_WiFiManager ESPAsync_wifiManager(&webServer, &dnsServer, "AsyncConfigOnStartup");
+  ESPAsync_WiFiManager ESPAsync_wifiManager(&webServer, &dnsServer, "aka-starter-jar");
 #endif
 
   //set custom ip for portal
