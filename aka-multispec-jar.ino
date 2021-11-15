@@ -245,14 +245,14 @@ int startY = 5;
 #define SENSOR_MAX 2048
 #define TICK_INTERVAL 15  // every n samples, we have a "tick" for visual distinction. 
 #define LOOP_DELAY_SECS 60  // sample once per minute; tick-to-tick interval is 16 minutes; total graph shows last 3.75h
-#define FAN_DURATION_MS 0 // length of time DURING the sampler() function that fan runs before we read the sensors
+#define FAN_DURATION_MS 10000 // length of time DURING the sampler() function that fan runs before we read the sensors
 #define VERBOSE 0
 #define DEBUG 1
 #define PORTAL_TIMEOUT 30  // host own AP for PORTAL_TIMEOUT seconds before joining wifi using any saved credentials
 
 //const char *starterName = "LENNY-FANNY"; // this one should be jar/FAC40A24
 //const char *starterName = "LENNY-GASSY";  // this one should be jar/60A8CC84
-String starterName = "nofan-" + String(ESP_getChipId(), HEX);
+String starterName = "10s fan " + String(ESP_getChipId(), HEX);
 
 #ifndef _swap_int16_t
 #define _swap_int16_t(a, b)                                                    \
@@ -504,7 +504,7 @@ void setup()
   display.setFont(&FreeSansBoldOblique9pt7b);
   display.print(starterName);
   stopFan();
-  // clobber(false);
+  clobber(true);
   // display.update();
   // goto sleep
   //  esp_sleep_enable_ext0_wakeup((gpio_num_t)BUTTON_PIN, LOW);
@@ -555,11 +555,11 @@ void setup()
   AsyncWebServer webServer(HTTP_PORT);
 
 #if ( ARDUINO_ESP32S2_DEV || ARDUINO_FEATHERS2 || ARDUINO_PROS2 || ARDUINO_MICROS2 )
-  ESPAsync_WiFiManager ESPAsync_wifiManager(&webServer, NULL, "aka-starter-jar");
+  ESPAsync_WiFiManager ESPAsync_wifiManager(&webServer, NULL, starterName.c_str()); // c_str() converts string into const char
 #else
   DNSServer dnsServer;
 
-  ESPAsync_WiFiManager ESPAsync_wifiManager(&webServer, &dnsServer, "aka-starter-jar");
+  ESPAsync_WiFiManager ESPAsync_wifiManager(&webServer, &dnsServer, starterName.c_str());
 #endif
 
   //set custom ip for portal
@@ -753,8 +753,8 @@ void loop()
     // drawGraph2(int series[], int seriesDepth, int sx, int sy, int sh, int sw, int s_min, int s_max, int s_thresh) {
     //    drawGraph2(series1, SAMPLE_DEPTH, 25, GRAPH_H*3, GRAPH_H, GRAPH_W, series1min, series1max, SERIES1_SIGNIFICANCE_THRESHOLD);
     //    drawGraph2(series2, SAMPLE_DEPTH, 25, GRAPH_H*2, GRAPH_H, GRAPH_W, series2min, series2max, SERIES2_SIGNIFICANCE_THRESHOLD);
-    drawGraph2(series1, SAMPLE_DEPTH, 25, (GRAPH_H * 2), GRAPH_H, GRAPH_W, series1min, series1max, SERIES1_SIGNIFICANCE_THRESHOLD);
-    drawGraph2(series2, SAMPLE_DEPTH, 25, GRAPH_H, GRAPH_H, GRAPH_W, series2min, series2max, SERIES2_SIGNIFICANCE_THRESHOLD);
+    drawGraph2(series1, SAMPLE_DEPTH, 25, (GRAPH_H * 2), GRAPH_H, GRAPH_W, 50, 200, SERIES1_SIGNIFICANCE_THRESHOLD);
+    drawGraph2(series2, SAMPLE_DEPTH, 25, GRAPH_H, GRAPH_H, GRAPH_W, 400, 2000, SERIES2_SIGNIFICANCE_THRESHOLD);
     drawTrend();
     drawName();
     // display.updateWindow(0, 0, GxEPD_WIDTH, GxEPD_HEIGHT, false);
